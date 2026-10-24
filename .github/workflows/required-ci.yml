@@ -1,7 +1,7 @@
 name: Owned synthetic required CI
 on:
   push:
-    branches: [main]
+    branches: [main, fixture-base-qualification]
   pull_request:
 permissions:
   contents: read
@@ -34,7 +34,17 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $ack = (Get-Content -LiteralPath feature_a/ci_ack.txt -Raw).Trim()
             if ($ack -ne $firstHead) {
-              Write-Output "::error file=feature_a/__init__.py,line=1,title=OWNED_SOURCE_DEFECT::Owned fixture requires feature_a/ci_ack.txt to equal original PR head $firstHead. Add this exact acknowledgement in the bounded coding repair and retain behavioral proof and independent review."
+              $annotationLine = $null
+              $hunks = @(git diff --unified=0 $env:BASE_SHA $env:HEAD_SHA -- feature_a/__init__.py)
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              foreach ($hunk in $hunks) {
+                if ($hunk -match '^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@') {
+                  $addedCount = if ($Matches[2]) { [int]$Matches[2] } else { 1 }
+                  if ($addedCount -gt 0) { $annotationLine = [int]$Matches[1]; break }
+                }
+              }
+              if ($null -eq $annotationLine) { throw 'Owned challenge requires a changed implementation line for attributable diagnostics' }
+              Write-Output "::error file=feature_a/__init__.py,line=$annotationLine,title=OWNED_SOURCE_DEFECT::Owned fixture requires feature_a/ci_ack.txt to equal original PR head $firstHead. Add this exact acknowledgement in the bounded coding repair and retain behavioral proof and independent review."
               exit 1
             }
           }
