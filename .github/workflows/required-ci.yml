@@ -1,0 +1,40 @@
+name: Owned synthetic required CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  required-ci:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Behavioral proof
+        shell: pwsh
+        run: |
+          python -m unittest discover
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Owned original-head repair challenge
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $changed = @(git diff --name-only $env:BASE_SHA $env:HEAD_SHA)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($changed | Where-Object { $_.StartsWith('feature_a/') }) {
+            $firstHead = @(git rev-list --reverse ($env:BASE_SHA + '..' + $env:HEAD_SHA))[0]
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $ack = (Get-Content -LiteralPath feature_a/ci_ack.txt -Raw).Trim()
+            if ($ack -ne $firstHead) {
+              Write-Output "::error file=feature_a/__init__.py,line=1,title=OWNED_SOURCE_DEFECT::Owned fixture requires feature_a/ci_ack.txt to equal original PR head $firstHead. Add this exact acknowledgement in the bounded coding repair and retain behavioral proof and independent review."
+              exit 1
+            }
+          }

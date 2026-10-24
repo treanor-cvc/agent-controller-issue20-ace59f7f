@@ -1,0 +1,3 @@
+# Owned synthetic fixture instructions
+
+Edit only the assigned feature directory. Implement the complete child criteria and mapped parent contributions. Add meaningful unittest behavioral tests inside that feature package; run python -m unittest discover. Keep complete requirement/proof/review identities. Child A's original-head acknowledgement is an explicitly pending hosted requirement at first local completion; solve its exact challenge only after CI observes the first published head. Do not weaken CI, modify workflows or tests outside the assigned directory, merge, deploy, or contact any other target.
